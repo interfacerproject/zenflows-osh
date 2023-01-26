@@ -10,6 +10,8 @@ WORKDIR /app
 RUN apk --no-cache add git nim nimble gcc musl-dev pcre-dev openssl1.1-compat-libs-static
 RUN git clone --recurse-submodules https://github.com/hoijui/osh-tool tmp
 RUN cd tmp && nimble build -y \
+	-d:release \
+	--opt:speed \
 	--passL:-static \
 	--passL:-no-pie \
 	-d:usePcreHeader \
