@@ -29,9 +29,9 @@ var log = stdlog.New(os.Stderr, "", stdlog.Ldate|stdlog.Ltime|stdlog.LUTC)
 func main() {
 	conf, err := loadConfig()
 	if err != nil {
-		log.Fatalf("bad error config: %s\n", err.Error())
+		log.Fatalf("bad config: %s", err.Error())
 	}
-	log.Printf("Starting service on %s\n", conf.addr)
+	log.Printf("Starting service on %s", conf.addr)
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/clone", cloneHandler)
