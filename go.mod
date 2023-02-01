@@ -1,3 +1,3 @@
-module github.com/interfacerproject/losh-magic-import
+module github.com/interfacerproject/zenflows-osh
 
 go 1.19
