@@ -18,8 +18,9 @@ ARG ALPVER=3.17
 
 FROM golang:1.19-alpine$ALPVER AS golang
 WORKDIR /app
+RUN apk --no-cache add make
 ADD . .
-RUN go build -o losh-import .
+RUN make build.rel
 
 FROM alpine:$ALPVER AS nim
 WORKDIR /app
@@ -47,10 +48,10 @@ RUN mkdir tmp && cd tmp \
 
 FROM alpine:$ALPVER
 WORKDIR /app
-EXPOSE 80/tcp 443/tcp 443/udp
+EXPOSE 8000/tcp
 ENV PATH="$PATH:/app/bin"
 RUN apk --no-cache add git
-COPY --from=golang /app/losh-import .
+COPY --from=golang /app/zosh .
 COPY --from=nim /app/osh ./bin/
 COPY --from=projvar /app/projvar ./bin/
-CMD ["./losh-import"]
+CMD ["./zosh"]
