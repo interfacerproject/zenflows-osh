@@ -19,10 +19,12 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 package main
 
 import (
-	"log"
+	stdlog "log"
 	"net/http"
 	"os"
 )
+
+var log = stdlog.New(os.Stderr, "", stdlog.Ldate|stdlog.Ltime|stdlog.LUTC)
 
 func main() {
 	conf, err := loadConfig()
