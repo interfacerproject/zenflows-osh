@@ -19,7 +19,6 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 package main
 
 import (
-	"errors"
 	"net"
 	"os"
 )
@@ -29,17 +28,19 @@ type config struct {
 }
 
 func loadConfig() (*config, error) {
-	addr, ok := os.LookupEnv("ADDR")
-	if !ok {
-		return nil, errors.New("ADDR must be set")
+	var c config
+
+	addrStr, ok := os.LookupEnv("ADDR")
+	if ok {
+		host, port, err := net.SplitHostPort(addrStr)
+		if err != nil {
+			return nil, err
+		}
+		c.addr = net.JoinHostPort(host, port)
+	} else {
+		log.Printf(`WARNING: ADDR is not set; defaulting to ":7000", which will bind to all IP addresses`)
+		c.addr = ":7000"
 	}
 
-	host, port, err := net.SplitHostPort(addr)
-	if err != nil {
-		return nil, err
-	}
-
-	return &config{
-		addr: host + ":" + port,
-	}, nil
+	return &c, nil
 }
