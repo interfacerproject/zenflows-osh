@@ -30,3 +30,4 @@
 !/osh.go
 !/config.go
 !/web.go
+!/analyze.go

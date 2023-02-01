@@ -19,76 +19,67 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
-	"os"
-	"os/exec"
-	"strings"
 )
 
-func cloneHandler(w http.ResponseWriter, r *http.Request) {
-	if r.URL.Path != "/clone" {
-		w.WriteHeader(http.StatusNotFound)
-		return
-	}
+func handlerMain(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		return
 	}
 
-	m := &struct{ Repo *string }{}
+	var (
+		buf *bytes.Buffer
+		err error
+	)
 
-	dec := json.NewDecoder(r.Body)
-	if err := dec.Decode(m); err != nil {
-		w.WriteHeader(http.StatusNotAcceptable)
-		fmt.Fprintf(w, "Parsing the body failed: %s\n", err.Error())
+	switch r.URL.Path[1:] { // 1 is the '/'
+	default:
+		http.Error(w,
+			fmt.Sprintf("the requested procedure %q is not available", r.URL.Path[1:]),
+			http.StatusNotFound)
 		return
+	case "analyze":
+		buf, err = doAnalyze(w, r)
 	}
+	// Other procedures can be added with a similar case statement
+	// above.  The buf and err variables above will be set and
+	// the below code will take care of the rest.
 
-	if m.Repo == nil || *m.Repo == "" {
-		w.WriteHeader(http.StatusNotAcceptable)
-		fmt.Fprintf(w, "Please provide a repository URL to clone\n")
-		return
+	if err != nil {
+		if e := jsonError(w, err); e != nil {
+			log.Printf("ERROR: replying error: %s", e.Error())
+		}
 	}
-
-	cloneAndAnalyze(w, *m.Repo)
+	if err := jsonData(w, buf); err != nil {
+		log.Printf("ERROR: replying data: %s", err.Error())
+	}
 }
 
-func cloneAndAnalyze(w http.ResponseWriter, repoURL string) {
-	log.Printf("Cloning and Analyzing repository %s\n", repoURL)
-
-	tmpDir, err := os.MkdirTemp("", "repo-")
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		fmt.Fprintf(w, "Error creating temporary directory: %s\n", err.Error())
-		return
+func jsonError(w http.ResponseWriter, err error) error {
+	w.WriteHeader(http.StatusInternalServerError)
+	s := struct {
+		Error string `json:"error"`
+	}{Error: err.Error()}
+	if e := json.NewEncoder(w).Encode(&s); e != nil {
+		return e
 	}
-	defer os.RemoveAll(tmpDir)
+	return nil
+}
 
-	cmd := exec.Command("git", "clone", repoURL, tmpDir)
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	if err := cmd.Run(); err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		fmt.Fprintf(w, "Error cloning repository: %s\n", err.Error())
-		return
+func jsonData(w http.ResponseWriter, buf *bytes.Buffer) error {
+	if _, err := fmt.Fprintf(w, `{"data":`); err != nil {
+		return err
 	}
-
-	cmd = exec.Command("./osh", "-fC", tmpDir, "check", "--report-json=/dev/stdout")
-	output, err := cmd.Output()
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		fmt.Fprintf(w, "Error running osh tool: %s\n", err.Error())
-		return
+	if _, err := io.Copy(w, buf); err != nil {
+		return err
 	}
-
-	output = []byte(strings.TrimPrefix(string(output), "JObject"))
-	w.WriteHeader(http.StatusCreated)
-	if _, err := w.Write(output); err != nil {
-		log.Printf("Writing output failed: %s\n", err.Error())
-		return
+	if _, err := fmt.Fprintf(w, "}"); err != nil {
+		return err
 	}
-
-	log.Printf("Cloned and Analyzed repository %s\n", repoURL)
+	return nil
 }
