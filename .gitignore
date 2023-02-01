@@ -11,6 +11,6 @@
 !/go.mod
 !/go.sum
 
-!/losh_import.go
+!/osh.go
 !/config.go
 !/web.go
