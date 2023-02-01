@@ -22,6 +22,7 @@ import (
 	stdlog "log"
 	"net/http"
 	"os"
+	"time"
 )
 
 var log = stdlog.New(os.Stderr, "", stdlog.Ldate|stdlog.Ltime|stdlog.LUTC)
@@ -33,8 +34,15 @@ func main() {
 	}
 	log.Printf("Starting service on %s", conf.addr)
 
-	mux := http.NewServeMux()
-	mux.HandleFunc("/clone", cloneHandler)
+	m := http.NewServeMux()
+	m.HandleFunc("/", handlerMain)
 
-	log.Fatal(http.ListenAndServe(conf.addr, mux))
+	s := &http.Server{
+		Addr:           conf.addr,
+		Handler:        http.MaxBytesHandler(m, 5<<20), // 5MiB
+		ReadTimeout:    30 * time.Second,
+		WriteTimeout:   30 * time.Second,
+		MaxHeaderBytes: 1 << 20, // 1MiB
+	}
+	log.Fatal(s.ListenAndServe())
 }
