@@ -54,9 +54,12 @@ func handlerMain(w http.ResponseWriter, r *http.Request) {
 		if e := jsonError(w, err); e != nil {
 			log.Printf("ERROR: replying error: %s", e.Error())
 		}
-	}
-	if err := jsonData(w, buf); err != nil {
-		log.Printf("ERROR: replying data: %s", err.Error())
+	} else if buf != nil {
+		if err := jsonData(w, buf); err != nil {
+			log.Printf("ERROR: replying data: %s", err.Error())
+		}
+	} else {
+		log.Fatalf("FATAL: unreachable: err xor buf shouldn't be nil")
 	}
 }
 
