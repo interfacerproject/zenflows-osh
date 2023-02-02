@@ -39,9 +39,10 @@ func handlerMain(w http.ResponseWriter, r *http.Request) {
 
 	switch r.URL.Path[1:] { // 1 is the '/'
 	default:
-		http.Error(w,
-			fmt.Sprintf("the requested procedure %q is not available", r.URL.Path[1:]),
-			http.StatusNotFound)
+		err = fmt.Errorf("the requested procedure %q is not available", r.URL.Path[1:])
+		if e := jsonErr(w, err, http.StatusNotFound); e != nil {
+			log.Printf("ERROR: jsonErr(): %s", e.Error())
+		}
 		return
 	case "analyze":
 		buf, err = doAnalyze(w, r)
@@ -51,31 +52,31 @@ func handlerMain(w http.ResponseWriter, r *http.Request) {
 	// the below code will take care of the rest.
 
 	if err != nil {
-		if e := jsonError(w, err); e != nil {
-			log.Printf("ERROR: replying error: %s", e.Error())
+		if e := jsonErr(w, err, http.StatusInternalServerError); e != nil {
+			log.Printf("ERROR: jsonErr(): %s", e.Error())
 		}
 	} else if buf != nil {
-		if err := jsonData(w, buf); err != nil {
-			log.Printf("ERROR: replying data: %s", err.Error())
+		if err := jsonOk(w, buf); err != nil {
+			log.Printf("ERROR: jsonOk(): %s", err.Error())
 		}
 	} else {
 		log.Fatalf("FATAL: unreachable: err xor buf shouldn't be nil")
 	}
 }
 
-func jsonError(w http.ResponseWriter, err error) error {
-	w.WriteHeader(http.StatusInternalServerError)
+func jsonErr(w http.ResponseWriter, err error, stat int) error {
+	w.WriteHeader(stat)
 	s := struct {
-		Error string `json:"error"`
-	}{Error: err.Error()}
+		Err string `json:"err"`
+	}{Err: err.Error()}
 	if e := json.NewEncoder(w).Encode(&s); e != nil {
 		return e
 	}
 	return nil
 }
 
-func jsonData(w http.ResponseWriter, buf *bytes.Buffer) error {
-	if _, err := fmt.Fprintf(w, `{"data":`); err != nil {
+func jsonOk(w http.ResponseWriter, buf *bytes.Buffer) error {
+	if _, err := fmt.Fprintf(w, `{"ok":`); err != nil {
 		return err
 	}
 	if _, err := io.Copy(w, buf); err != nil {
