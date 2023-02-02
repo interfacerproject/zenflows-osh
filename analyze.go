@@ -46,12 +46,14 @@ func doAnalyze(w http.ResponseWriter, r *http.Request) (*bytes.Buffer, error) {
 	}
 	defer os.RemoveAll(tmpDir)
 
-	if err := exec.Command("git", "clone", *in.Repo, tmpDir).Run(); err != nil {
+	cmd := exec.Command("git", "clone", *in.Repo, tmpDir)
+	cmd.Env = []string{"GIT_TERMINAL_PROMPT=0"}
+	if err := cmd.Run(); err != nil {
 		return nil, err
 	}
 
 	buf := new(bytes.Buffer)
-	cmd := exec.Command("osh", "-fC", tmpDir, "check", "--report-json=/dev/stdout")
+	cmd = exec.Command("osh", "-fC", tmpDir, "check", "--report-json=/dev/stdout")
 	cmd.Stdout = buf
 	if err := cmd.Run(); err != nil {
 		return nil, err
