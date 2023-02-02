@@ -14,23 +14,37 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-/*
+.POSIX:
+.SUFFIXES:
 
-!/.gitignore
-!/.github
+# in order for it to not conflict with osh-tool binary
+PROG=zosh
 
-!/.dockerignore
-!/Dockerfile
+all: build
 
-!/README.md
-!/LICENSE
+build: build.dev
 
-!/Makefile
+build.dev:
+	go build -o ${PROG}
 
-!/go.mod
-!/go.sum
+build.rel:
+	go build -o ${PROG}
 
-!/osh.go
-!/config.go
-!/web.go
-!/analyze.go
+serve: build.dev
+	./${PROG}
+
+test: build.dev
+	go test ./...
+
+clean:
+	rm -rf ${PROG}
+
+help:
+	@echo "build|build.dev:	build for development (the default target)"
+	@echo "build.rel:	build for release"
+	@echo "serve:		build and execute the program"
+	@echo "test:		run the tests against the development binary"
+	@echo "clean:		clean any generated file"
+	@echo "help:		print this text"
+
+.PHONY: all build build.dev build.rel test clean help
