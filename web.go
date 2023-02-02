@@ -26,6 +26,22 @@ import (
 	"net/http"
 )
 
+func cors(next http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Add("access-control-allow-origin", "*")
+		w.Header().Add("access-control-allow-credentials", "true")
+		w.Header().Add("access-control-allow-methods", http.MethodPost)
+		w.Header().Add("access-control-allow-headers", "content-type, content-length, accept")
+
+		if r.Method == http.MethodOptions {
+			http.Error(w, "No Content", http.StatusNoContent)
+			return
+		}
+
+		next(w, r)
+	}
+}
+
 func handlerMain(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		w.WriteHeader(http.StatusMethodNotAllowed)

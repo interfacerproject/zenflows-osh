@@ -35,7 +35,7 @@ func main() {
 	log.Printf("Starting service on %s", conf.addr)
 
 	m := http.NewServeMux()
-	m.HandleFunc("/", handlerMain)
+	m.HandleFunc("/", cors(handlerMain))
 
 	s := &http.Server{
 		Addr:           conf.addr,
