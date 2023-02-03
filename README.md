@@ -80,10 +80,9 @@ https://ghcr.io/interfacerproject/zenflows-osh.
 
 Then, you can run:
 
-	docker run --rm -p PORT:7000 ghcr.io/interfacerproject/zenflows-osh:master
+	docker run --rm -p PORT:7000 ghcr.io/interfacerproject/zenflows-osh
 
-to start the service on port `PORT`.  The `master` tag will fetch
-the latest build available.
+to start the service on port `PORT`.
 
 You may optionally use a docker-compose.yml template like this as well:
 
@@ -92,8 +91,7 @@ version: "3.8"
 services:
   zosh:
     container_name: zosh
-    # The master tag will fetch the latest bulid available.
-    image: ghcr.io/interfacerproject/zenflows-osh:master
+    image: ghcr.io/interfacerproject/zenflows-osh
     ports:
       # The service will be listening on port 3000 of the host
       # machine.
