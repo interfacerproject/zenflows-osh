@@ -23,7 +23,7 @@ A tool to clone and analyze git(1) repositories.
 
 ## Bulding and executing
 
-You may either choose build from source, build and use the Docker
+You may either choose to build from source, build and use the Docker
 image, or just use the pre-built Docker image on
 https://ghcr.io/interfacerproject/zenflows-osh.
 
@@ -40,20 +40,20 @@ implementation installed (GNU make(1) works), you can just run:
 
 	make serve
 
-Which builds a development version of the service as an executable
-`zosh`.  You may use:
+which builds the development version of the service as an executable
+named `zosh`.  You may use:
 
 	make build.rel
 
 to build the release version, and use the binary `zosh`.  Using
 `make serve` again would build the development version, so use the
-executable directly.  At the moment, there's no difference between
-the development and release versions.
+produced executable directly with `./zosh`.  At the moment, there's
+no difference between the development and release versions.
 
-If you choose to use this approach, you must have git(1), OSH, and
-projvar (which is a dependency of OSH) programs included in your
-PATH.  OSH can be fetched from https://github.com/hoijui/osh-tool,
-and projvar can be fetched from https://github.com/hoijui/projvar.
+If you choose to use this approach, you must have git(1),
+[OSH tool](https://github.com/hoijui/osh-tool), and
+[projvar](https://github.com/hoijui/projvar) (which is a dependency
+of OSH) programs included in your $PATH.
 
 
 ### Building from source with Docker
@@ -96,11 +96,6 @@ services:
       # The service will be listening on port 3000 of the host
       # machine.
       - 3000:7000
-    environment:
-      # The address to bind on, defaults to `:7000`, which listens
-      # on all IP addresses (both versions) on port 7000.
-      # So, this is redundant.
-      ADDR: :7000
     stdin_open: true
     tty: true
 ```
