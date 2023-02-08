@@ -14,19 +14,22 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+ARG GOVER=1.19
 ARG ALPVER=3.17
 
-FROM golang:1.19-alpine$ALPVER AS golang
+
+FROM golang:$GOVER-alpine$ALPVER AS golang
 WORKDIR /app
 RUN apk --no-cache add make
-ADD . .
+COPY . .
 RUN make build.rel
 
-FROM alpine:$ALPVER AS nim
-WORKDIR /app
+
+FROM alpine:$ALPVER AS osh-tool
+WORKDIR /app/tmp
 RUN apk --no-cache add git nim nimble gcc musl-dev pcre-dev openssl1.1-compat-libs-static
-RUN git clone --recurse-submodules https://github.com/hoijui/osh-tool tmp
-RUN cd tmp && nimble build -y \
+RUN git clone --recurse-submodules https://github.com/hoijui/osh-tool .
+RUN nimble build -y \
 	-d:release \
 	--opt:speed \
 	--passL:-static \
@@ -38,20 +41,29 @@ RUN cd tmp && nimble build -y \
 	--dynlibOverride:crypto \
 	--passL:-lcrypto && mv build/osh ..
 
+
 FROM alpine:$ALPVER AS projvar
-WORKDIR /app
+WORKDIR /app/tmp
 RUN wget -qO projvar.tgz \
 	https://github.com/hoijui/projvar/releases/download/0.16.0/projvar-0.16.0-x86_64-unknown-linux-musl.tar.gz
-RUN mkdir tmp && cd tmp \
-	&& tar -xzf ../projvar.tgz >/dev/null 2>&1 \
-	&& mv projvar-*-x86_64-unknown-linux-musl/projvar ..
+RUN tar -xzf projvar.tgz && mv projvar-*-x86_64-unknown-linux-musl/projvar ..
+
 
 FROM alpine:$ALPVER
 WORKDIR /app
-EXPOSE 8000/tcp
+ARG PORT=7000
+ENV ADDR=:$PORT
+EXPOSE $PORT
+ARG USER=zosh
+ARG GROUP=$USER
 ENV PATH="$PATH:/app/bin"
+
 RUN apk --no-cache add git
-COPY --from=golang /app/zosh .
-COPY --from=nim /app/osh ./bin/
+
+RUN addgroup -S "$GROUP" && adduser -SG"$GROUP" "$USER"
+
 COPY --from=projvar /app/projvar ./bin/
-CMD ["./zosh"]
+COPY --from=osh-tool /app/osh ./bin/
+COPY --from=golang --chown="$USER:$GROUP" /app/zosh ./
+
+CMD ./zosh
