@@ -20,6 +20,7 @@ ARG ALPVER=3.17
 
 FROM golang:$GOVER-alpine$ALPVER AS golang
 WORKDIR /app
+ENV GONOPROXY=
 RUN apk --no-cache add make
 COPY . .
 RUN make build.rel
