@@ -14,22 +14,67 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-ARG GOVER=1.19
-ARG ALPVER=3.17
+# syntax=docker/dockerfile:1
 
+ARG ALP_VER=3.17
+ARG GO_VER=1.19
 
-FROM golang:$GOVER-alpine$ALPVER AS golang
+ARG OKH_TOOL_VER=0.4.4
+ARG PROJVAR_VER=0.16.2
+ARG MLE_VER=0.23.0
+ARG OSH_DIR_STD_VER=0.7.0
+ARG OSH_TOOL_VER=0.4.0
+
+FROM golang:$GO_VER-alpine$ALP_VER AS golang
+RUN apk --no-cache add make
 WORKDIR /app
 ENV GONOPROXY=
-RUN apk --no-cache add make
 COPY . .
 RUN make build.rel
 
 
-FROM alpine:$ALPVER AS osh-tool
+FROM alpine:$ALP_VER as okh-tool
 WORKDIR /app/tmp
+ARG OKH_TOOL_VER
+RUN wget -qO- -- \
+		"https://github.com/OPEN-NEXT/LOSH-OKH-tool/releases/download/$OKH_TOOL_VER/okh-tool-$OKH_TOOL_VER-x86_64-unknown-linux-musl.tar.gz" \
+	| tar -xzf -
+RUN  mv -- "okh-tool-$OKH_TOOL_VER-x86_64-unknown-linux-musl/okh-tool" ..
+
+
+FROM alpine:$ALP_VER AS projvar
+WORKDIR /app/tmp
+ARG PROJVAR_VER
+RUN wget -qO- -- \
+		"https://github.com/hoijui/projvar/releases/download/$PROJVAR_VER/projvar-$PROJVAR_VER-x86_64-unknown-linux-musl.tar.gz" \
+	| tar -xzf -
+RUN  mv -- "projvar-$PROJVAR_VER-x86_64-unknown-linux-musl/projvar" ..
+
+
+FROM alpine:$ALP_VER AS mle
+WORKDIR /app/tmp
+ARG MLE_VER
+RUN wget -qO- -- \
+		"https://github.com/hoijui/mle/releases/download/$MLE_VER/mle-$MLE_VER-x86_64-unknown-linux-musl.tar.gz" \
+	| tar -xzf -
+RUN mv -- "mle-$MLE_VER-x86_64-unknown-linux-musl/mle" ..
+
+
+FROM alpine:$ALP_VER AS osh-dir-std
+WORKDIR /app/tmp
+ARG OSH_DIR_STD_VER
+RUN wget -qO- -- \
+		"https://github.com/hoijui/osh-dir-std-rs/releases/download/$OSH_DIR_STD_VER/osh-dir-std-$OSH_DIR_STD_VER-x86_64-unknown-linux-musl.tar.gz" \
+	| tar -xzf -
+RUN mv -- "osh-dir-std-$OSH_DIR_STD_VER-x86_64-unknown-linux-musl/osh-dir-std" ..
+
+
+FROM alpine:$ALP_VER AS osh-tool
 RUN apk --no-cache add git nim nimble gcc musl-dev pcre-dev openssl1.1-compat-libs-static
-RUN git clone --recurse-submodules https://github.com/hoijui/osh-tool .
+WORKDIR /app/tmp
+ARG OSH_TOOL_VER
+RUN git clone -q --depth 1 --recurse-submodules -b "$OSH_TOOL_VER" \
+	https://github.com/hoijui/osh-tool .
 RUN nimble build -y \
 	-d:release \
 	--opt:speed \
@@ -40,31 +85,32 @@ RUN nimble build -y \
 	--dynlibOverride:ssl \
 	--passL:-lssl \
 	--dynlibOverride:crypto \
-	--passL:-lcrypto && mv build/osh ..
+	--passL:-lcrypto
+RUN mv build/osh ..
 
 
-FROM alpine:$ALPVER AS projvar
-WORKDIR /app/tmp
-RUN wget -qO projvar.tgz \
-	https://github.com/hoijui/projvar/releases/download/0.16.0/projvar-0.16.0-x86_64-unknown-linux-musl.tar.gz
-RUN tar -xzf projvar.tgz && mv projvar-*-x86_64-unknown-linux-musl/projvar ..
+FROM alpine:$ALP_VER
+RUN apk --no-cache add git reuse
 
-
-FROM alpine:$ALPVER
-WORKDIR /app
-ARG PORT=7000
-ENV ADDR=:$PORT
-EXPOSE $PORT
 ARG USER=zosh
 ARG GROUP=$USER
-ENV PATH="$PATH:/app/bin"
+RUN addgroup -S -- "$GROUP"
+RUN adduser -SG "$GROUP" -- "$USER"
 
-RUN apk --no-cache add git
+WORKDIR /app
+COPY --from=okh-tool --chown=$USER:$GROUP /app/okh-tool ./bin/
+COPY --from=projvar --chown=$USER:$GROUP /app/projvar ./bin/
+COPY --from=mle --chown=$USER:$GROUP /app/mle ./bin/
+COPY --from=osh-dir-std --chown=$USER:$GROUP /app/osh-dir-std ./bin/
+COPY --from=osh-tool --chown=$USER:$GROUP /app/osh ./bin/
+COPY --from=golang --chown=$USER:$GROUP /app/zosh ./
 
-RUN addgroup -S "$GROUP" && adduser -SG"$GROUP" "$USER"
+ENV PATH=$PATH:/app/bin
 
-COPY --from=projvar /app/projvar ./bin/
-COPY --from=osh-tool /app/osh ./bin/
-COPY --from=golang --chown="$USER:$GROUP" /app/zosh ./
+ARG PORT="7000"
+EXPOSE "$PORT"
+ENV ADDR=:$PORT
+
+USER $USER:$GROUP
 
 CMD ./zosh
