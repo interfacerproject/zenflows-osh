@@ -25,44 +25,45 @@ import (
 	"os/exec"
 )
 
-func doAnalyze(w http.ResponseWriter, r *http.Request) (*bytes.Buffer, error) {
+func doAnalyze(w http.ResponseWriter, r *http.Request) (string, error) {
 	in := &struct {
 		Repo *string `json:"repo"`
 	}{}
 
 	if err := json.NewDecoder(r.Body).Decode(&in); err != nil {
-		return nil, err
+		return "", err
 	}
 
 	if in.Repo == nil || *in.Repo == "" {
-		return nil, errors.New("the repo url must be a non-empty string")
+		return "", errors.New("the repo url must be a non-empty string")
 	}
 
 	tmpDir, err := os.MkdirTemp("", "repo-*")
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 	defer os.RemoveAll(tmpDir)
 
 	cmd := exec.Command("git", "clone", *in.Repo, tmpDir)
 	cmd.Env = []string{"GIT_TERMINAL_PROMPT=0"}
 	if err := cmd.Run(); err != nil {
-		return nil, err
+		return "", err
 	}
 
 	buf := new(bytes.Buffer)
-	cmd = exec.Command("osh", "-fC", tmpDir, "check", "--report-json=/dev/stdout")
+	cmd = exec.Command("osh", "--json", "check")
+	cmd.Dir = tmpDir
 	cmd.Stdout = buf
 	if err := cmd.Run(); err != nil {
-		return nil, err
+		return "", err
 	}
 
-	// as the output starts with JObject, we descard it
+	// the output starts with JObject (7 bytes), so we discard that part
 	b := make([]byte, 7)
 	n, err := buf.Read(b)
 	if n != 7 || string(b) != "JObject" || err != nil {
-		return nil, errors.New("osh-tool is acting up")
+		return "", errors.New("osh-tool is acting up")
 	}
 
-	return buf, nil
+	return buf.String(), nil
 }
