@@ -58,6 +58,8 @@ func handlerMain(w http.ResponseWriter, r *http.Request) {
 		return
 	case "analyze":
 		buf, err = doAnalyze(w, r)
+	case "shortlog":
+		buf, err = doShortlog(w, r)
 	}
 	// Other procedures can be added with a similar case statement
 	// above.  The buf and err variables above will be set and

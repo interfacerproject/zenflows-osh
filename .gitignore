@@ -37,3 +37,4 @@
 !/config.go
 !/web.go
 !/analyze.go
+!/shortlog.go
