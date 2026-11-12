@@ -26,6 +26,13 @@
 !/Dockerfile
 
 !/README.md
+
+# Funding logos used by the README
+!/docs/
+/docs/*
+!/docs/assets/
+/docs/assets/*
+!/docs/assets/funding/
 !/LICENSES
 
 !/Makefile
